@@ -1,128 +1,120 @@
-import json
 import csv
-import configparser
+import json
+from configparser import RawConfigParser
 
 
-def read_json(user=None):
-    with open('{}.{}'.format(filename, extension), 'rt') as f:
-        obj = f.read()
-        if user:
-            return json.loads(obj)[user]
-        else:
+class PhoneBook:
+
+    def __init__(self, database):
+        try:
+            self.data = database.read()
+        except FileNotFoundError:
+            self.data = {}
+
+    def create(self, name, phone):
+        if not self.data:
+            self.data = {name: phone}
+        self.data[name] = phone
+        db.write(self.data)
+        return self.data
+
+    def retrieve(self, name=None):
+        if name:
+            return self.data[name]
+        return self.data
+
+    def update(self, name, new_phone):
+        self.data[name] = new_phone
+        db.write(self.data)
+        return self.data[name]
+
+    def delete(self, name):
+        del self.data[name]
+        db.write(self.data)
+        return self.data
+
+
+class Controller:
+
+    def get_action(self, action, phonebook):
+
+        if action == '1':
+            name = input('Name ')
+            phone = input('Phone ')
+            print(phonebook.create(name, phone))
+
+        elif action == '2':
+            name = input('Name ')
+            print(phonebook.retrieve(name))
+
+        elif action == '3':
+            name = input('Name ')
+            new_phone = input('New Phone ')
+            print(phonebook.update(name, new_phone))
+
+        elif action == '4':
+            name = input('Name ')
+            print(phonebook.delete(name))
+
+        elif action == '5':
+            raise KeyboardInterrupt('Exit')
+
+    def read_config(self):
+        config = RawConfigParser()
+        config.read('config.ini')
+
+        file_name = config.get('File', 'filename')
+        file_extension = config.get('File', 'extension')
+
+        return file_name, file_extension
+
+
+class JsonHandler:
+
+    def __init__(self, fname):
+        self.filename = "{}.json".format(fname)
+
+    def read(self):
+        with open(self.filename, 'rt') as f:
+            obj = f.read()
             return json.loads(obj)
 
-
-def write_json(user=None, users=None):
-
-    if user:
-        try:
-            users = read_func()
-        except FileNotFoundError:
-            users = user
-        else:
-            user_name, user_phone = list(user.items())[0]
-            users[user_name] = user_phone
-
-    with open('{}.{}'.format(filename, extension), 'wt') as f:
-        f.write(json.dumps(
-            users
-        ))
+    def write(self, data):
+        with open(self.filename, 'wt') as f:
+            obj = json.dumps(data)
+            f.write(obj)
 
 
-def read_csv(users):
-    with open('{}.{}'.format(filename, extension), 'wt') as f:
-        pass
+class CsvHandler:
 
+    def __init__(self, fname):
+        self.fieldnames = ['Name', 'Phone']
+        self.filename = "{}.csv".format(fname)
 
-def write_csv(users):
-    with open('{}.{}'.format(filename, extension), 'wt') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerows(users)
+    def read(self):
+        with open(self.filename, 'rt') as csvfile:
+            reader = csv.reader(csvfile)
+            next(reader, None)
+            return dict(reader)
 
-
-config = configparser.RawConfigParser()
-config.read('config.ini')
-
-filename = config.get('File', 'filename')
-extension = config.get('File', 'extension')
-
-if extension == 'csv':
-    write_func = write_csv
-    read_func = read_csv
-else:
-    write_func = write_json
-    read_func = read_json
-
-
-def create_user(name, phone):
-    users = {name: phone}
-    write_func(users)
-
-
-def get_user(name):
-    try:
-        phone = read_func(name)
-    except KeyError:
-        print('No such user')
-    else:
-        print(phone)
-
-
-def update_user(name, new_phone):
-    delete_user(name)
-    create_user(name, new_phone)
-
-
-def delete_user(name):
-    users = read_func()
-
-    if users and name in users:
-        del users[name]
-    else:
-        raise ValueError('No such user or users are empty')
-
-    write_func(users=users)
-
-
-def set_config(ext, name):
-    config.set('File', 'extension', ext)
-    config.set('File', 'filename', name)
-
-    with open('config.ini', 'wt') as configfile:
-        config.write(configfile)
-
-    config.read('config.ini')
-
-    global filename, extension
-    filename = config.get('File', 'filename')
-    extension = config.get('File', 'extension')
-
-
-def get_action(choose):
-
-    if choose == '1':
-        name = input('Name ')
-        phone = input('Phone ')
-        create_user(name, phone)
-    elif choose == '2':
-        name = input('Name ')
-        get_user(name)
-    elif choose == '3':
-        name = input('Name ')
-        new_phone = input('New Phone ')
-        update_user(name, new_phone)
-    elif choose == '4':
-        name = input('Name ')
-        delete_user(name)
-    elif choose == '5':
-        extension = input('Choose file format (csv|json) ')
-        filename = input('Enter file name ')
-        set_config(extension, filename)
-    elif choose == '6':
-        raise KeyboardInterrupt('Exit')
+    def write(self, data):
+        with open(self.filename, 'wt') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(self.fieldnames)
+            writer.writerows([k, v] for k, v in data.items())
 
 
 if __name__ == '__main__':
+
+    controller = Controller()
+    filename, extension = controller.read_config()
+
+    if extension == 'json':
+        db = JsonHandler(filename)
+    else:
+        db = CsvHandler(filename)
+
+    phone_book = PhoneBook(db)
 
     while True:
         choose = input(
@@ -131,12 +123,11 @@ if __name__ == '__main__':
                 2: get
                 3: update
                 4: delete
-                5: settings
-                6: exit
+                5: exit
             """
         )
         try:
-            get_action(choose)
+            controller.get_action(choose, phone_book)
         except KeyboardInterrupt as e:
             print(e)
             break
