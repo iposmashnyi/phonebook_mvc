@@ -1,20 +1,25 @@
-from phonebook.model import PhoneBookModel
-from phonebook.controller import PhonebookController
+from phonebook.model import Model
+from phonebook.controller import Controller
 from phonebook.serializers import csv_serializer, json_serializer
-from phonebook.view import View
+from phonebook import network_view
+from phonebook import console_view
 
 
 def main():
-    controller = PhonebookController()
-    view = View()
-    filename, extension = controller.read_config()
+    controller = Controller()
+    filename, extension, connection = controller.read_config()
 
     if extension == 'json':
         db = json_serializer.JsonSerializer(filename)
     else:
         db = csv_serializer.CsvSerializer(filename)
 
-    phone_book = PhoneBookModel(db)
+    if connection == 'network':
+        view = network_view.View()
+    else:
+        view = console_view.View()
+
+    phonebook = Model(db)
 
     while True:
         help_message = \
@@ -29,7 +34,7 @@ def main():
         view.response(help_message)
         action = view.input('Action = ')
         try:
-            controller.get_action(action, phone_book, view)
+            controller.get_action(action, phonebook, view)
         except KeyboardInterrupt as e:
             print(e)
             break
