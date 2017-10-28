@@ -1,7 +1,7 @@
 from configparser import RawConfigParser
 
 
-class PhonebookController:
+class Controller:
 
     def get_action(self, action, phonebook, view):
 
@@ -32,5 +32,6 @@ class PhonebookController:
 
         file_name = config.get('File', 'filename')
         file_extension = config.get('File', 'extension')
+        connection = config.get('File', 'connection')
 
-        return file_name, file_extension
+        return file_name, file_extension, connection
